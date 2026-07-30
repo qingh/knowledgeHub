@@ -1,0 +1,14 @@
+.env
+.venv
+__pycache__
+doc/**
+
+# chainlit
+.files/
+.chainlit/
+chainlit.md
+
+# Chroma 向量数据库
+chroma_db/
+*.chroma/
+chroma.sqlite3
