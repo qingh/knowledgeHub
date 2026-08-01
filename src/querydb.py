@@ -15,3 +15,5 @@ collection = client.get_collection(name="langchain")
 print("文档总数：", collection.count())
 
 result = collection.get(include=["documents", "metadatas"])
+
+print(result)
