@@ -17,6 +17,8 @@ from langchain_community.document_loaders import DirectoryLoader, PyMuPDFLoader
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+from config import CHROMA_DB_PATH
+
 # Windows 终端默认 GBK，打印中文会乱码。
 # sys.stdout 的静态类型是 TextIO（没有 reconfigure），只有具体实现 TextIOWrapper 才有；
 # 被重定向到管道/StringIO 时也可能不是 TextIOWrapper，所以先做 isinstance 判断。
@@ -57,14 +59,10 @@ def build_vectorstore():
     )
 
     # ========== 4. 存入 Chroma（避免重复写入） ==========
-    persist_directory = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        "chroma_db",
-    )
     Chroma.from_documents(
         documents=chunks,
         embedding=embeddings,
-        persist_directory=persist_directory,
+        persist_directory=CHROMA_DB_PATH,
     )
 
     print(f"入库完成，共 {len(chunks)} 个 chunk")

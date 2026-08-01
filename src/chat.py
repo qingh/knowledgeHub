@@ -1,5 +1,6 @@
 import os
-from pathlib import Path
+
+from config import CHROMA_DB_PATH
 
 # 国内网络拉 HuggingFace 模型慢，走镜像。
 # 注意：必须在 import huggingface_hub / langchain_huggingface 之前设置，
@@ -19,8 +20,6 @@ from langchain_huggingface import HuggingFaceEmbeddings
 
 from base import chat
 
-DB_DIR = Path(__file__).resolve().parent / "chroma_db"
-
 # ---- 全局初始化（只需一次，多个用户会话共用）----
 embeddings = HuggingFaceEmbeddings(
     model_name="BAAI/bge-small-zh-v1.5",
@@ -28,7 +27,7 @@ embeddings = HuggingFaceEmbeddings(
     encode_kwargs={"normalize_embeddings": True},  # bge 系列官方建议做 L2 normalize
 )
 vectorstore = Chroma(
-    persist_directory=str(DB_DIR),
+    persist_directory=CHROMA_DB_PATH,
     embedding_function=embeddings,
 )
 retriever = vectorstore.as_retriever(
