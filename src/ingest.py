@@ -60,6 +60,7 @@ def build_vectorstore():
 
     # ========== 4. 存入 Chroma（避免重复写入） ==========
     Chroma.from_documents(
+        collection_name="knowledge_hub",
         documents=chunks,
         embedding=embeddings,
         persist_directory=CHROMA_DB_PATH,

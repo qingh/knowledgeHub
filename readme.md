@@ -1,5 +1,9 @@
 # 企业内部知识库 + AI 问答助手
 
+## Requirements
+- Python 3.12.0
+- 依赖见 `requirements.txt`
+
 一个基于 **RAG（检索增强生成）** 的企业内部知识库问答系统。把公司内部的 PDF 文档（如员工手册、规章制度）灌入本地向量库，再通过带来源引用的对话界面回答员工提问，答案严格基于内部文档，不编造内容。
 
 ## 功能特性
@@ -35,7 +39,6 @@ knowledgeHub/
 │   ├── ingest.py        # 离线入库脚本：加载 → 切分 → 向量化 → 写入 Chroma
 │   ├── chat.py          # Chainlit 应用：RAG 检索问答 + 流式输出 + 来源展示
 │   └── chroma_db/       # Chroma 持久化目录（自动生成，已 gitignore）
-├── chainlit.md          # Chainlit 欢迎页文案
 ├── .env                 # 环境变量（已 gitignore）
 └── readme.md
 ```
@@ -72,6 +75,7 @@ pip install chainlit langchain langchain-community langchain-openai \
 MODEL=deepseek-chat                        # 模型名称
 BASE_URL=https://api.deepseek.com/v1       # OpenAI 兼容接口地址
 API_KEY=sk-xxxxxxxxxxxxxxxx                # 你的 API Key
+CHROMA_DB_PATH=/home/my-chroma-data        # chromadb data
 ```
 
 三个变量缺一不可，缺失时启动会直接报错提示。
@@ -81,7 +85,7 @@ API_KEY=sk-xxxxxxxxxxxxxxxx                # 你的 API Key
 把 PDF 放进 `doc/` 目录，然后在项目根目录执行：
 
 ```bash
-python src/ingest.py
+python -m src.ingest
 ```
 
 > 注意：脚本使用相对路径 `./doc` 读取文档，必须在**项目根目录**下运行。
