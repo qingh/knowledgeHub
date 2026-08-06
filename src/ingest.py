@@ -17,7 +17,7 @@ from langchain_community.document_loaders import DirectoryLoader, PyMuPDFLoader
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from config import CHROMA_DB_PATH
+from config import CHROMA_DB_PATH, EMBED_MODEL_NAME
 
 # Windows 终端默认 GBK，打印中文会乱码。
 # sys.stdout 的静态类型是 TextIO（没有 reconfigure），只有具体实现 TextIOWrapper 才有；
@@ -53,8 +53,7 @@ def build_vectorstore():
 
     # ========== 3. Embedding ==========
     embeddings = HuggingFaceEmbeddings(
-        model_name="BAAI/bge-small-zh-v1.5",
-        # model_name="BAAI/bge-large-zh-v1.5",
+        model_name=EMBED_MODEL_NAME,
         encode_kwargs={"normalize_embeddings": True},  # bge 系列官方建议做 L2 normalize
     )
 
