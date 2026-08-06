@@ -34,16 +34,19 @@
 ```
 knowledge-hub/
 ├── doc/                    # 待入库的 PDF 源文档（已 gitignore）
-├── src/
-│   ├── __init__.py
-│   ├── base.py             # LLM 客户端构建，读取 .env 配置并缓存实例
-│   ├── ingest.py           # 离线入库脚本：加载 → 切分 → 向量化 → 写入 Chroma
-│   └── chat.py             # Chainlit 应用：RAG 检索问答 + 流式输出 + 来源展示
-├── config.py               # 公共配置：CHROMA_DB_PATH、EMBED_MODEL_NAME 等
+├── base.py                 # LLM 客户端构建，读取 .env 配置并缓存实例
+├── ingest.py               # 离线入库脚本：加载 → 切分 → 向量化 → 写入 Chroma
+├── chat.py                 # Chainlit 应用：RAG 检索问答 + 流式输出 + 来源展示
+├── config.py               # 公共配置：CHROMA_DB_PATH、EMBED_MODEL_NAME、COLLECTION_NAME
+├── chainlit.md             # Chainlit 欢迎页文案
+├── requirements.txt        # 依赖清单
 ├── data/local-chroma-data  # Chroma 持久化默认目录（自动生成，已 gitignore）
 ├── .env                    # 环境变量（已 gitignore）
 └── readme.md
 ```
+
+> 脚本全部位于项目根目录（不再是 `src/` 包），直接以顶层模块方式运行即可，
+> `from config import ...`、`from base import ...` 这类导入无需再区分运行方式。
 
 ## 工作流程
 
@@ -80,14 +83,25 @@ API_KEY=sk-xxxxxxxxxxxxxxxx                # 你的 API Key
 CHROMA_DB_PATH=/home/my-chroma-data        # chromadb data
 ```
 
-三个变量缺一不可，缺失时启动会直接报错提示。
+三个变量缺一不可，缺失时启动会直接报错提示。`CHROMA_DB_PATH` 可省略，默认写入 `data/local-chroma-data`。
+
+其余不常改的配置直接写在 `config.py` 中：
+
+| 配置项 | 默认值 | 说明 |
+| --- | --- | --- |
+| `EMBED_MODEL_NAME` | `BAAI/bge-small-zh-v1.5` | 中文 Embedding 模型 |
+| `COLLECTION_NAME` | `knowledge_hub` | Chroma 集合名，**入库与检索共用同一个常量** |
+
+> `ingest.py` 与 `chat.py` 都从 `config.COLLECTION_NAME` 读取集合名。
+> 之前两边没有显式指定，`ingest.py` 写进 `knowledge_hub`，而 `chat.py` 落在 langchain 默认的 `langchain` 集合，
+> 导致检索到空集合、回答永远是「文档中没有相关信息」。现在统一由配置提供，避免再次写读不一致。
 
 ### 3. 放入文档并建库
 
 把 PDF 放进 `doc/` 目录，然后在项目根目录执行：
 
 ```bash
-python -m src.ingest
+python ingest.py
 ```
 
 > 注意：脚本使用相对路径 `./doc` 读取文档，必须在**项目根目录**下运行。
@@ -105,7 +119,7 @@ python -m src.ingest
 ### 4. 启动问答服务
 
 ```bash
-chainlit run src/chat.py -w
+chainlit run chat.py -w
 ```
 
 浏览器打开 http://localhost:8000 即可开始提问。`-w` 为热重载，开发时使用。
@@ -125,7 +139,7 @@ chainlit run src/chat.py -w
 ## 常见问题
 
 **Q：文档更新后需要做什么？**
-重新运行 `python -m src.ingest`。当前实现为追加写入，若需完全重建，请先删除 `data/local-chroma-data/` 目录。实际路径以 `.env` 中 `CHROMA_DB_PATH` 为准。
+重新运行 `python ingest.py`。当前实现为追加写入，若需完全重建，请先删除 `data/local-chroma-data/` 目录。实际路径以 `.env` 中 `CHROMA_DB_PATH` 为准。
 
 **Q：想换更强的 Embedding 模型？**
 打开 `config.py`，把 `EMBED_MODEL_NAME` 改为 `BAAI/bge-large-zh-v1.5`（取消上方注释即可，`ingest.py` 和 `chat.py` 会自动读取）。切换后必须重建向量库，因为模型维度变了。
@@ -139,6 +153,19 @@ chainlit run src/chat.py -w
 **Q：Windows 终端中文乱码？**
 `ingest.py` 已自动将 stdout 重配置为 UTF-8，无需额外处理。
 
+**Q：入库明明成功了，提问却总说「文档中没有相关信息」？**
+先排查写入与检索是否指向同一个集合。二者现在都读 `config.COLLECTION_NAME`，正常情况下已经一致；
+若手工改过 `Chroma(...)` 的 `collection_name` / `database` / `persist_directory` 任一参数，
+必须**入库端和检索端同步改**，否则会连到一个空集合。可以用下面的命令确认集合里到底有多少条向量：
+
+```bash
+python -c "
+from langchain_chroma import Chroma
+from config import CHROMA_DB_PATH, COLLECTION_NAME
+print(Chroma(persist_directory=CHROMA_DB_PATH, collection_name=COLLECTION_NAME)._collection.count())
+"
+```
+
 ## 后续规划
 
 - [ ] 多轮对话记忆（当前每次提问相互独立）
@@ -146,27 +173,3 @@ chainlit run src/chat.py -w
 - [ ] 增量入库与去重，避免重复运行产生冗余向量
 - [ ] 引用来源精确到页码并支持原文跳转
 - [ ] 用户登录与文档权限隔离
-
-
------------------------------------------------------------------------------------
-
-
-问题原因是：你用 py -m src.chat 以包模块方式运行，chat.py 中的：
-
-
-from base import chat
-会被 Python 解释为导入项目根目录下的顶层模块 base。但实际文件位于 src/base.py，所以找不到，报：
-
-
-ModuleNotFoundError: No module named 'base'
-我已经修复了 src/chat.py:20，现在会根据运行方式选择正确的导入方式：
-
-py -m src.chat：使用 from .base import chat
-chainlit run src/chat.py -w：使用 from base import chat
-已验证：
-
-
-py -m src.chat
-运行成功，原来的 ModuleNotFoundError 已消失。
-
-另外，你之前对 src/ingest.py 的修改没有被改动。
