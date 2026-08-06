@@ -13,3 +13,6 @@ CHROMA_DB_PATH = os.environ.get(
 
 # EMBED_MODEL_NAME=BAAI/bge-large-zh-v1.5
 EMBED_MODEL_NAME = "BAAI/bge-small-zh-v1.5"
+
+# 写入与检索必须使用同一个 collection_name，否则会检索到空集合
+COLLECTION_NAME = "knowledge_hub"

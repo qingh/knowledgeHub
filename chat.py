@@ -1,6 +1,6 @@
 import os
 
-from config import CHROMA_DB_PATH, EMBED_MODEL_NAME
+from config import CHROMA_DB_PATH, COLLECTION_NAME, EMBED_MODEL_NAME
 
 # 国内网络拉 HuggingFace 模型慢，走镜像。
 # 注意：必须在 import huggingface_hub / langchain_huggingface 之前设置，
@@ -28,6 +28,7 @@ embeddings = HuggingFaceEmbeddings(
 vectorstore = Chroma(
     persist_directory=CHROMA_DB_PATH,
     embedding_function=embeddings,
+    collection_name=COLLECTION_NAME,
 )
 retriever = vectorstore.as_retriever(
     search_type="mmr",

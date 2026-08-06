@@ -146,3 +146,27 @@ chainlit run src/chat.py -w
 - [ ] 增量入库与去重，避免重复运行产生冗余向量
 - [ ] 引用来源精确到页码并支持原文跳转
 - [ ] 用户登录与文档权限隔离
+
+
+-----------------------------------------------------------------------------------
+
+
+问题原因是：你用 py -m src.chat 以包模块方式运行，chat.py 中的：
+
+
+from base import chat
+会被 Python 解释为导入项目根目录下的顶层模块 base。但实际文件位于 src/base.py，所以找不到，报：
+
+
+ModuleNotFoundError: No module named 'base'
+我已经修复了 src/chat.py:20，现在会根据运行方式选择正确的导入方式：
+
+py -m src.chat：使用 from .base import chat
+chainlit run src/chat.py -w：使用 from base import chat
+已验证：
+
+
+py -m src.chat
+运行成功，原来的 ModuleNotFoundError 已消失。
+
+另外，你之前对 src/ingest.py 的修改没有被改动。
