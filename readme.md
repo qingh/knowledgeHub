@@ -27,19 +27,21 @@
 | Embedding | BAAI/bge-small-zh-v1.5（`langchain-huggingface` + sentence-transformers） |
 | 向量数据库 | Chroma（本地持久化） |
 | 文档解析 | PyMuPDF |
-| 运行环境 | Python 3.12 |
+| 运行环境 | Python 3.12.0 |
 
 ## 目录结构
 
 ```
-knowledgeHub/
-├── doc/                 # 待入库的 PDF 源文档（已 gitignore）
+knowledge-hub/
+├── doc/                    # 待入库的 PDF 源文档（已 gitignore）
 ├── src/
-│   ├── base.py          # LLM 客户端构建，读取 .env 配置并缓存实例
-│   ├── ingest.py        # 离线入库脚本：加载 → 切分 → 向量化 → 写入 Chroma
-│   ├── chat.py          # Chainlit 应用：RAG 检索问答 + 流式输出 + 来源展示
-│   └── chroma_db/       # Chroma 持久化目录（自动生成，已 gitignore）
-├── .env                 # 环境变量（已 gitignore）
+│   ├── __init__.py
+│   ├── base.py             # LLM 客户端构建，读取 .env 配置并缓存实例
+│   ├── ingest.py           # 离线入库脚本：加载 → 切分 → 向量化 → 写入 Chroma
+│   └── chat.py             # Chainlit 应用：RAG 检索问答 + 流式输出 + 来源展示
+├── config.py               # 公共配置：CHROMA_DB_PATH、EMBED_MODEL_NAME 等
+├── data/local-chroma-data  # Chroma 持久化默认目录（自动生成，已 gitignore）
+├── .env                    # 环境变量（已 gitignore）
 └── readme.md
 ```
 
@@ -123,10 +125,10 @@ chainlit run src/chat.py -w
 ## 常见问题
 
 **Q：文档更新后需要做什么？**
-重新运行 `python src/ingest.py`。当前实现为追加写入，若需完全重建，请先删除 `src/chroma_db/` 目录。
+重新运行 `python -m src.ingest`。当前实现为追加写入，若需完全重建，请先删除 `data/local-chroma-data/` 目录。实际路径以 `.env` 中 `CHROMA_DB_PATH` 为准。
 
 **Q：想换更强的 Embedding 模型？**
-`ingest.py` 与 `chat.py` 中均预留了 `BAAI/bge-large-zh-v1.5` 的注释行，取消注释即可（两处必须保持一致，否则向量维度不匹配）。切换后需重建向量库。
+打开 `config.py`，把 `EMBED_MODEL_NAME` 改为 `BAAI/bge-large-zh-v1.5`（取消上方注释即可，`ingest.py` 和 `chat.py` 会自动读取）。切换后必须重建向量库，因为模型维度变了。
 
 **Q：模型下载卡住 / SSL 超时？**
 代码默认设置 `HF_ENDPOINT=https://hf-mirror.com` 走国内镜像，并开启 `HF_HUB_OFFLINE=1` 跳过联网检查。首次下载模型时需临时注释掉 `HF_HUB_OFFLINE` 那一行。
